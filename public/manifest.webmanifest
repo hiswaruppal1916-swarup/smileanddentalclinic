@@ -1,0 +1,36 @@
+{
+  "name": "Smile & Dental Clinic",
+  "short_name": "Smile Clinic",
+  "description": "Professional dental care & cosmetic dental surgery by Dr. Ananyo Mandal in Burdwan. Open 7 days a week.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#0D9488",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/favicon.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/favicon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Book Appointment",
+      "url": "/book",
+      "description": "Book a new dental appointment with exact time"
+    },
+    {
+      "name": "Track Appointment",
+      "url": "/track",
+      "description": "Track your booked appointment status"
+    }
+  ]
+}

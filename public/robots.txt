@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Allow: /treatments/
+Allow: /about
+Allow: /team
+Allow: /gallery
+Allow: /contact
+Allow: /book
+Allow: /track
+Disallow: /doctor/
+Disallow: /doctor/*
+Disallow: /api/
+
+Sitemap: https://smileanddentalclinic.com/sitemap.xml
