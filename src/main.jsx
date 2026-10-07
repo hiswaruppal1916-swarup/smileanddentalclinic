@@ -13,6 +13,24 @@ if ('serviceWorker' in navigator) {
       .register('/firebase-messaging-sw.js', { scope: '/' })
       .then((reg) => {
         console.log('[PWA / FCM] Service Worker registered with scope:', reg.scope);
+
+        // Check for updates periodically (every 1 hour)
+        setInterval(() => {
+          reg.update().catch(() => {});
+        }, 60 * 60 * 1000);
+
+        // Detect new version
+        reg.onupdatefound = () => {
+          const installingWorker = reg.installing;
+          if (installingWorker) {
+            installingWorker.onstatechange = () => {
+              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('[PWA] New version available.');
+                window.dispatchEvent(new CustomEvent('sdc-sw-update-available'));
+              }
+            };
+          }
+        };
       })
       .catch((err) => {
         console.warn('[PWA / FCM] Service Worker registration failed:', err);

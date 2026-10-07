@@ -5,6 +5,7 @@ import Footer from './components/Footer';
 import FloatingActions from './components/FloatingActions';
 import NotificationToast from './components/NotificationToast';
 import NotificationBellModal from './components/NotificationBellModal';
+import PWAInstallBanner from './components/PWAInstallBanner';
 
 // Pages
 import Home from './pages/Home';
@@ -69,9 +70,10 @@ export default function App() {
       {!isDoctorRoute && <FloatingActions />}
       <Footer />
 
-      {/* Global Notification Components */}
+      {/* Global Notification Components & PWA Install Banner */}
       <NotificationToast />
       <NotificationBellModal />
+      <PWAInstallBanner />
     </div>
   );
 }

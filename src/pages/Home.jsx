@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import {
   Calendar,
   Clock,
-  MapPin,
   Phone,
   ShieldCheck,
   Sparkles,
@@ -12,8 +11,8 @@ import {
   Award,
   Stethoscope,
   HeartPulse,
-  ExternalLink,
 } from 'lucide-react';
+import WhatsAppIcon from '../components/WhatsAppIcon';
 import { supabase } from '../lib/supabase';
 
 export default function Home() {
@@ -140,62 +139,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 2. CLINIC HOURS & LOCATION STRIP */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-navy text-white rounded-3xl p-6 sm:p-8 shadow-xl grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x divide-slate-800">
-          {/* Working Hours */}
-          <div className="flex items-start gap-4 pt-4 md:pt-0">
-            <div className="p-3 rounded-2xl bg-teal-600/30 text-teal-400 shrink-0">
-              <Clock className="w-6 h-6" />
-            </div>
-            <div>
-              <h4 className="font-heading font-bold text-white text-base">Open 7 Days a Week</h4>
-              <p className="text-xs text-teal-300 font-semibold mt-0.5">Morning: 10:30 AM – 2:00 PM</p>
-              <p className="text-xs text-teal-300 font-semibold">Evening: 5:00 PM – 9:00 PM</p>
-              <p className="text-xs text-slate-400 mt-1">No weekly holidays. Walk-ins welcomed.</p>
-            </div>
-          </div>
-
-          {/* Location */}
-          <div className="flex items-start gap-4 pt-4 md:pt-0 md:pl-6">
-            <div className="p-3 rounded-2xl bg-teal-600/30 text-teal-400 shrink-0">
-              <MapPin className="w-6 h-6" />
-            </div>
-            <div>
-              <h4 className="font-heading font-bold text-white text-base">Clinic Address</h4>
-              <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
-                Opposite INOX, Beside WOW MOMO,<br />
-                Beside SBI ATM, Burdwan 713101
-              </p>
-              <a
-                href="https://maps.app.goo.gl/DaxAQyaVuSHSXSck9"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-teal-400 font-bold mt-2 hover:underline"
-              >
-                Directions on Google Maps <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-          </div>
-
-          {/* Emergency & Primary Call */}
-          <div className="flex items-start gap-4 pt-4 md:pt-0 md:pl-6">
-            <div className="p-3 rounded-2xl bg-accent-orange/30 text-orange-400 shrink-0">
-              <Phone className="w-6 h-6" />
-            </div>
-            <div>
-              <h4 className="font-heading font-bold text-white text-base">Contact & WhatsApp</h4>
-              <a href="tel:9903424407" className="block text-lg font-bold text-white hover:text-teal-300 mt-0.5">
-                9903424407
-              </a>
-              <p className="text-xs text-slate-400">Additional: 6297190906 • 9732085852</p>
-              <p className="text-xs text-slate-400">mandalananyo@gmail.com</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. TREATMENTS PREVIEW (Bilingual: English + Bengali Subtitle) */}
+      {/* 2. TREATMENTS PREVIEW (Bilingual: English + Bengali Subtitle) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
         <div className="text-center max-w-3xl mx-auto space-y-3">
           <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-teal-100 text-teal-800 text-xs font-bold uppercase tracking-wider">
@@ -373,7 +317,7 @@ export default function Home() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-heading font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-all text-base"
               >
-                Chat on WhatsApp
+                <WhatsAppIcon className="w-5 h-5 shrink-0" /> Chat on WhatsApp
               </a>
             </div>
           </div>

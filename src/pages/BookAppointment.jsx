@@ -140,6 +140,11 @@ export default function BookAppointment() {
       return;
     }
 
+    if (!navigator.onLine) {
+      setErrorMsg("You are offline. Please reconnect to submit your appointment.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -210,7 +215,11 @@ export default function BookAppointment() {
       setBookingSuccess(insertedAppt);
     } catch (err) {
       console.error('Booking submission error:', err);
-      setErrorMsg(err.message || 'Failed to submit appointment. Please try again or call 9903424407.');
+      if (!navigator.onLine || err.message?.toLowerCase().includes('fetch') || err.message?.toLowerCase().includes('network')) {
+        setErrorMsg("You are offline. Please reconnect to submit your appointment.");
+      } else {
+        setErrorMsg(err.message || 'Failed to submit appointment. Please try again or call 9903424407.');
+      }
     } finally {
       setIsSubmitting(false);
     }

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Phone, MessageCircle, Calendar } from 'lucide-react';
+import { Phone, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import WhatsAppIcon from './WhatsAppIcon';
 
 export default function FloatingActions() {
   const primaryPhone = '9903424407';
@@ -9,7 +10,7 @@ export default function FloatingActions() {
   )}`;
 
   return (
-    <aside aria-label="Quick contact actions" className="fixed bottom-5 right-4 z-40 flex flex-col gap-2.5 items-end">
+    <aside aria-label="Quick contact actions" className="fixed bottom-5 right-4 z-40 flex flex-col gap-2.5 items-end safe-pb">
       {/* Floating Book Button */}
       <Link
         to="/book"
@@ -30,7 +31,7 @@ export default function FloatingActions() {
         aria-label="Chat on WhatsApp"
         title="WhatsApp: 9903424407"
       >
-        <MessageCircle className="w-6 h-6 fill-current" />
+        <WhatsAppIcon className="w-6 h-6" />
       </a>
 
       {/* Floating Direct Call Button */}
