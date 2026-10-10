@@ -13,6 +13,7 @@ import {
   HeartPulse,
 } from 'lucide-react';
 import WhatsAppIcon from '../components/WhatsAppIcon';
+import HeroCarousel from '../components/HeroCarousel';
 import { supabase } from '../lib/supabase';
 
 export default function Home() {
@@ -34,9 +35,12 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="space-y-16 sm:space-y-24">
-      {/* 1. HERO SECTION */}
-      <section className="relative overflow-hidden pt-8 pb-16 lg:py-24 bg-gradient-to-b from-teal-50/60 via-canvas to-white">
+    <div className="space-y-12 sm:space-y-20">
+      {/* 1. HERO SLIDING BANNER (FLIPKART STYLE) */}
+      <HeroCarousel />
+
+      {/* 2. DOCTOR INTRODUCTION & CLINICAL CONSULTATION */}
+      <section className="relative overflow-hidden pt-2 pb-12 lg:py-16 bg-gradient-to-b from-teal-50/50 via-canvas to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
             {/* Left Content */}
