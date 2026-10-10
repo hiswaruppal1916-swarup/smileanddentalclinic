@@ -1,5 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
+import { supabase } from './supabase';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDUxtzb3a1oRvdxmgcQS8doPvO7vOdlYV8",
@@ -52,21 +53,46 @@ export async function requestNotificationPermissionAndGetToken(role = 'patient',
     if (fcmToken) {
       console.log('[FCM] Generated Device Token:', fcmToken.substring(0, 15) + '...');
 
-      // Register device on backend API
+      // 1. Direct Supabase Upsert (Always reliable across local & deployed environments)
       const platform = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 'mobile_pwa' : 'desktop';
       const deviceName = `${navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'} - ${navigator.platform || 'Browser'}`;
+      const effectiveUserId = userId || localStorage.getItem('sdc_patient_token') || 'guest';
 
-      await fetch('/api/register-device', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fcm_token: fcmToken,
-          role,
-          user_id: userId || localStorage.getItem('sdc_patient_token') || 'guest',
-          device_name: deviceName,
-          platform,
-        }),
-      });
+      try {
+        await supabase.from('notification_devices').upsert(
+          {
+            fcm_token: fcmToken,
+            role,
+            user_id: effectiveUserId,
+            device_name: deviceName,
+            platform,
+            is_active: true,
+            updated_at: new Date().toISOString(),
+            last_seen_at: new Date().toISOString(),
+          },
+          { onConflict: 'fcm_token' }
+        );
+      } catch (sbErr) {
+        console.warn('[FCM] Supabase device registration error:', sbErr);
+      }
+
+      // 2. Also register device on backend API if reachable
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        await fetch(`${apiUrl}/api/register-device`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fcm_token: fcmToken,
+            role,
+            user_id: effectiveUserId,
+            device_name: deviceName,
+            platform,
+          }),
+        });
+      } catch (apiErr) {
+        // Backend optional
+      }
 
       localStorage.setItem('sdc_fcm_token', fcmToken);
       localStorage.setItem('sdc_notifications_enabled', 'true');

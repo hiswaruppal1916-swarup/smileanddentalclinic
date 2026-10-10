@@ -111,16 +111,51 @@ export default function DoctorDashboard() {
 
       if (error) throw error;
 
-      // 2. Dispatch FCM Push Notification to Patient
-      await fetch('/api/notify/status-updated', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          appointment_id: appointmentId,
-          status: newStatus,
-          notes: reason,
-        }),
+      // 2. Insert notification for Patient directly in Supabase (Guaranteed in-app notification)
+      let title = `Appointment ${newStatus}`;
+      let body = `Your appointment for ${data.treatment_name} on ${data.appointment_date} at ${data.exact_time} is now ${newStatus}.`;
+
+      if (newStatus === 'Accepted') {
+        title = 'Appointment Confirmed! ✅';
+        body = `Dr. Ananyo Mandal has accepted your appointment for ${data.treatment_name} on ${data.appointment_date} at ${data.exact_time}.`;
+      } else if (newStatus === 'Rejected') {
+        title = 'Appointment Update ℹ️';
+        body = reason
+          ? `Appointment request update: ${reason}`
+          : `Your appointment request for ${data.appointment_date} could not be confirmed. Tap to reschedule.`;
+      } else if (newStatus === 'Completed') {
+        title = 'Treatment Completed ✨';
+        body = `Thank you for choosing Smile & Dental Clinic. We hope you had a comfortable visit!`;
+      }
+
+      const target_url = `/track?token=${data.patient_tracking_token}`;
+
+      await supabase.from('notifications').insert({
+        recipient_role: 'patient',
+        recipient_id: data.patient_tracking_token,
+        appointment_id: data.id,
+        notification_type: `appointment_${newStatus.toLowerCase()}`,
+        title,
+        body,
+        target_url,
+        is_read: false,
       });
+
+      // 3. Dispatch FCM Push Notification to Patient via backend if reachable
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        await fetch(`${apiUrl}/api/notify/status-updated`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            appointment_id: appointmentId,
+            status: newStatus,
+            notes: reason,
+          }),
+        });
+      } catch (pushErr) {
+        console.warn('[FCM] Server push notify trigger:', pushErr.message);
+      }
 
       // Update local state
       setAppointments((prev) => prev.map((a) => (a.id === appointmentId ? data : a)));
@@ -138,18 +173,51 @@ export default function DoctorDashboard() {
   const handleTestDoctorPush = async () => {
     setTestPushStatus('Sending test push...');
     try {
-      const res = await fetch('/api/notify/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          role: 'doctor',
-          title: 'Smile & Dental Clinic 🦷',
-          body: 'Doctor FCM push notification test was successful!',
-        }),
+      // 1. Immediately insert a test notification into Supabase so bell rings and history updates
+      await supabase.from('notifications').insert({
+        recipient_role: 'doctor',
+        recipient_id: 'doctor',
+        notification_type: 'test_push',
+        title: 'Doctor Portal Test 🔔',
+        body: 'In-app notification test triggered at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        target_url: '/doctor/dashboard',
+        is_read: false,
       });
-      const data = await res.json();
-      setTestPushStatus(`Push sent to ${data.recipientCount || 1} registered device(s)!`);
-      setTimeout(() => setTestPushStatus(''), 4000);
+
+      // 2. Dispatch to server-side push endpoint with safe JSON/HTML response parsing
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const endpoint = `${apiUrl}/api/notify/test`;
+      let pushMessage = 'Notification added to bell!';
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            role: 'doctor',
+            title: 'Smile & Dental Clinic 🦷',
+            body: 'Doctor FCM push notification test was successful!',
+          }),
+        });
+
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await res.json();
+          if (res.ok && data.success) {
+            pushMessage = `Push dispatched to ${data.recipientCount ?? 1} device(s) & added to bell!`;
+          } else {
+            pushMessage = `Notification added to bell. Push note: ${data.error || 'No active device'}`;
+          }
+        } else {
+          // If server returned HTML (e.g. 404 from static hosting)
+          pushMessage = `Notification added to bell! (FCM server offline - status ${res.status})`;
+        }
+      } catch (networkErr) {
+        pushMessage = `Notification added to bell! (FCM server unreachable: ${networkErr.message})`;
+      }
+
+      setTestPushStatus(pushMessage);
+      setTimeout(() => setTestPushStatus(''), 5000);
     } catch (e) {
       setTestPushStatus('Failed: ' + e.message);
     }

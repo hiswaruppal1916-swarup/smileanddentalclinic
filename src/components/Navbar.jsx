@@ -93,12 +93,12 @@ export default function Navbar() {
             <button
               onClick={() => setIsBellOpen(true)}
               className="relative p-2 rounded-full text-slate-600 hover:text-teal-700 hover:bg-teal-50 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 shrink-0"
-              title="Notifications"
+              title={unreadCount > 0 ? `${unreadCount} unread notification(s)` : 'Notifications'}
               aria-label="View notifications"
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-accent-coral text-white text-[10px] font-bold rounded-full animate-bounce shadow-sm">
+                <span className="absolute top-0 right-0 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-rose-600 text-white text-[10px] font-bold rounded-full ring-2 ring-white shadow-sm animate-pulse">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}

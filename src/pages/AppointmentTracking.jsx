@@ -47,6 +47,7 @@ export default function AppointmentTracking() {
       } else {
         setAppointment(data);
         localStorage.setItem('sdc_patient_token', data.patient_tracking_token);
+        window.dispatchEvent(new CustomEvent('sdc-patient-token-updated', { detail: data.patient_tracking_token }));
 
         // Fetch related notifications
         const { data: notifs } = await supabase
@@ -88,6 +89,14 @@ export default function AppointmentTracking() {
         },
         (payload) => {
           setAppointment(payload.new);
+          supabase
+            .from('notifications')
+            .select('*')
+            .eq('recipient_id', payload.new.patient_tracking_token)
+            .order('created_at', { ascending: false })
+            .then(({ data: notifs }) => {
+              if (notifs) setNotifications(notifs);
+            });
         }
       )
       .subscribe();

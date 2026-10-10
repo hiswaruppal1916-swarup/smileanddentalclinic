@@ -190,13 +190,34 @@ export default function BookAppointment() {
 
       if (insertError) throw insertError;
 
-      // Save tracking token in patient's localStorage
+      // Save tracking token in patient's localStorage and dispatch event
       localStorage.setItem('sdc_patient_token', trackingToken);
       localStorage.setItem('sdc_last_appointment_id', insertedAppt.id);
+      window.dispatchEvent(new CustomEvent('sdc-patient-token-updated', { detail: trackingToken }));
 
-      // 2. Dispatch real-time push notification to Doctor via server API
+      // 2. Insert notification for Doctor directly into Supabase (Guaranteed in-app notification & Realtime alert)
+      const docNotifTitle = 'New Appointment Request 🦷';
+      const docNotifBody = `New appointment received from ${insertedAppt.patient_name} for ${insertedAppt.treatment_name} on ${insertedAppt.appointment_date} at ${insertedAppt.exact_time}.`;
+
       try {
-        await fetch('/api/notify/appointment-booked', {
+        await supabase.from('notifications').insert({
+          recipient_role: 'doctor',
+          recipient_id: 'doctor',
+          appointment_id: insertedAppt.id,
+          notification_type: 'appointment_booked',
+          title: docNotifTitle,
+          body: docNotifBody,
+          target_url: '/doctor/dashboard',
+          is_read: false,
+        });
+      } catch (notifInsertErr) {
+        console.error('[Notification] Doctor notification insert error:', notifInsertErr);
+      }
+
+      // 3. Dispatch real-time push notification to Doctor via server API (if reachable)
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        await fetch(`${apiUrl}/api/notify/appointment-booked`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ appointment: insertedAppt }),

@@ -1,10 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { requestNotificationPermissionAndGetToken, setupForegroundMessageListener } from '../lib/firebase';
+import { useAuth } from './AuthContext';
 
 const NotificationContext = createContext();
 
 export function NotificationProvider({ children }) {
+  const { isDoctor: authIsDoctor } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [activeToast, setActiveToast] = useState(null);
@@ -13,14 +15,34 @@ export function NotificationProvider({ children }) {
   );
   const [isBellOpen, setIsBellOpen] = useState(false);
 
+  // Dynamic patient tracking token state
+  const [patientToken, setPatientToken] = useState(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('sdc_patient_token') : null
+  );
+
   // Active recipient identity
-  const patientToken = typeof window !== 'undefined' ? localStorage.getItem('sdc_patient_token') : null;
-  const isDoctor = typeof window !== 'undefined' ? localStorage.getItem('sdc_is_doctor') === 'true' : false;
+  const isDoctor = authIsDoctor || (typeof window !== 'undefined' && localStorage.getItem('sdc_is_doctor') === 'true');
   const currentRole = isDoctor ? 'doctor' : 'patient';
   const currentRecipientId = isDoctor ? 'doctor' : patientToken;
 
+  // Listen for patient token changes across app and tabs
+  useEffect(() => {
+    const handleTokenChange = (e) => {
+      const newToken = e.detail || localStorage.getItem('sdc_patient_token');
+      if (newToken && newToken !== patientToken) {
+        setPatientToken(newToken);
+      }
+    };
+    window.addEventListener('sdc-patient-token-updated', handleTokenChange);
+    window.addEventListener('storage', handleTokenChange);
+    return () => {
+      window.removeEventListener('sdc-patient-token-updated', handleTokenChange);
+      window.removeEventListener('storage', handleTokenChange);
+    };
+  }, [patientToken]);
+
   // Fetch initial notifications
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       let query = supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(30);
 
@@ -43,33 +65,47 @@ export function NotificationProvider({ children }) {
     } catch (e) {
       console.error('[NotificationContext] Fetch error:', e);
     }
-  };
+  }, [isDoctor, patientToken]);
 
   useEffect(() => {
     fetchNotifications();
 
-    // Setup Supabase Realtime Subscription
+    // Setup Supabase Realtime Subscription for notifications
+    const channelName = isDoctor ? 'notifs_doctor_live' : `notifs_patient_${patientToken || 'guest'}`;
     const channel = supabase
-      .channel('public:notifications')
+      .channel(channelName)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications' },
+        { event: '*', schema: 'public', table: 'notifications' },
         (payload) => {
-          const newNotif = payload.new;
-          // Filter strictly: patient sees only their own notifications, doctor sees doctor notifications
-          const isRelevant =
-            (isDoctor && newNotif.recipient_role === 'doctor') ||
-            (!isDoctor && patientToken && newNotif.recipient_role === 'patient' && newNotif.recipient_id === patientToken);
+          if (payload.eventType === 'INSERT') {
+            const newNotif = payload.new;
+            const isRelevant =
+              (isDoctor && newNotif.recipient_role === 'doctor') ||
+              (!isDoctor && patientToken && newNotif.recipient_role === 'patient' && newNotif.recipient_id === patientToken);
 
-          if (isRelevant) {
-            setNotifications((prev) => [newNotif, ...prev]);
-            setUnreadCount((c) => c + 1);
+            if (isRelevant) {
+              setNotifications((prev) => {
+                if (prev.some((n) => n.id === newNotif.id)) return prev;
+                return [newNotif, ...prev];
+              });
+              if (!newNotif.is_read) {
+                setUnreadCount((c) => c + 1);
+              }
 
-            // Trigger in-app toast
-            setActiveToast({
-              title: newNotif.title,
-              body: newNotif.body,
-              target_url: newNotif.target_url,
+              // Trigger in-app toast
+              setActiveToast({
+                title: newNotif.title,
+                body: newNotif.body,
+                target_url: newNotif.target_url,
+              });
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedNotif = payload.new;
+            setNotifications((prev) => {
+              const next = prev.map((n) => (n.id === updatedNotif.id ? updatedNotif : n));
+              setUnreadCount(next.filter((n) => !n.is_read).length);
+              return next;
             });
           }
         }
@@ -89,7 +125,7 @@ export function NotificationProvider({ children }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [patientToken, isDoctor]);
+  }, [patientToken, isDoctor, fetchNotifications]);
 
   const enableNotifications = async (customRole = currentRole, customUserId = currentRecipientId) => {
     const res = await requestNotificationPermissionAndGetToken(customRole, customUserId);
@@ -106,8 +142,11 @@ export function NotificationProvider({ children }) {
   };
 
   const markAsRead = async (id) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
-    setUnreadCount((c) => Math.max(0, c - 1));
+    setNotifications((prev) => {
+      const next = prev.map((n) => (n.id === id ? { ...n, is_read: true } : n));
+      setUnreadCount(next.filter((n) => !n.is_read).length);
+      return next;
+    });
     await supabase.from('notifications').update({ is_read: true }).eq('id', id);
   };
 

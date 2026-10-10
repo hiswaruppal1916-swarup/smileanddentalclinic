@@ -31,7 +31,11 @@ export default function NotificationBellModal() {
     if (!isoStr) return '';
     try {
       const d = new Date(isoStr);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' • ' + d.toLocaleDateString();
+      return (
+        d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) +
+        ' • ' +
+        d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' })
+      );
     } catch {
       return '';
     }
