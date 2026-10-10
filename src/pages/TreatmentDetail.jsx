@@ -56,8 +56,11 @@ export default function TreatmentDetail() {
         <div className="lg:col-span-5 space-y-4">
           <div className="bg-white p-3 rounded-3xl border border-slate-200/80 shadow-clinical overflow-hidden">
             <img
-              src={treatment.image_url}
+              src={treatment.image_url || `/assets/treatments/${treatment.slug}.jpg`}
               alt={`${treatment.name_en} - ${treatment.name_bn}`}
+              onError={(e) => {
+                e.currentTarget.src = `/assets/treatments/${treatment.slug}.jpg`;
+              }}
               className="w-full aspect-square object-cover rounded-2xl"
             />
           </div>

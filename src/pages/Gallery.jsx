@@ -54,6 +54,30 @@ export default function Gallery() {
       image: '/assets/treatments/composite.jpg',
       desc: 'Tooth-colored aesthetic restorative dentistry.',
     },
+    {
+      title: 'Fixed Dental Bridge',
+      category: 'treatments',
+      image: '/assets/treatments/bridge.jpg',
+      desc: 'Seamlessly replace missing teeth and restore chewing ability.',
+    },
+    {
+      title: 'Teeth Gap Closure & Diastema Treatment',
+      category: 'treatments',
+      image: '/assets/treatments/teeth-gap-closure.jpg',
+      desc: 'Non-invasive composite bonding for a seamless, closed smile.',
+    },
+    {
+      title: 'Gentle Tooth Extraction',
+      category: 'treatments',
+      image: '/assets/treatments/extraction.jpg',
+      desc: 'Safe, comfortable normal & surgical extractions with socket preservation.',
+    },
+    {
+      title: 'Laser Skin Tags & Mould Removal',
+      category: 'treatments',
+      image: '/assets/treatments/skin-tags-mould-removal.jpg',
+      desc: 'Precise dermatological laser removal ensuring fast recovery and minimal scarring.',
+    },
   ];
 
   const filteredItems =

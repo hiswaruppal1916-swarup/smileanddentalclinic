@@ -67,9 +67,11 @@ export default function Treatments() {
             >
               <div className="relative aspect-square overflow-hidden bg-slate-100">
                 <img
-                  src={t.image_url}
+                  src={t.image_url || `/assets/treatments/${t.slug}.jpg`}
                   alt={t.name_en}
-                  loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.src = `/assets/treatments/${t.slug}.jpg`;
+                  }}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-navy/85 backdrop-blur-md text-white text-[11px] font-bold">
