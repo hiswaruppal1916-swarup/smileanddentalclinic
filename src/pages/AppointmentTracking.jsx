@@ -13,6 +13,9 @@ import {
   Phone,
   RefreshCw,
   Sparkles,
+  Trash2,
+  AlertTriangle,
+  Bell,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNotifications } from '../context/NotificationContext';
@@ -21,6 +24,10 @@ export default function AppointmentTracking() {
   const [searchParams] = useSearchParams();
   const tokenFromUrl = searchParams.get('token');
   const storedToken = typeof window !== 'undefined' ? localStorage.getItem('sdc_patient_token') : null;
+
+  const { deleteNotification, deleteAllNotifications } = useNotifications();
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const [inputToken, setInputToken] = useState(tokenFromUrl || storedToken || '');
   const [appointment, setAppointment] = useState(null);
@@ -245,26 +252,90 @@ export default function AppointmentTracking() {
           )}
 
           {/* Notifications Log for this patient */}
-          {notifications.length > 0 && (
-            <div className="space-y-3 pt-2">
-              <h3 className="font-heading font-bold text-sm text-navy">
-                Appointment Notification History
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <h3 className="font-heading font-bold text-sm text-navy flex items-center gap-1.5">
+                <Bell className="w-4 h-4 text-teal-600" /> Appointment Notification History
               </h3>
+              {notifications.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteAll(true)}
+                  className="text-xs font-semibold text-rose-600 hover:text-rose-700 p-1 flex items-center gap-1 transition-colors"
+                  title="Delete all notifications"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete All
+                </button>
+              )}
+            </div>
+
+            {/* Confirm Delete All Dialog Bar */}
+            {confirmDeleteAll && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-2 animate-fadeIn text-xs text-rose-800">
+                <span className="flex items-center gap-1 font-semibold">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  Delete all notification history?
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteAll(false)}
+                    className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await deleteAllNotifications();
+                      setNotifications([]);
+                      setConfirmDeleteAll(false);
+                    }}
+                    className="px-2.5 py-1 bg-rose-600 text-white rounded-lg hover:bg-rose-700 font-bold"
+                  >
+                    Delete All
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {notifications.length === 0 ? (
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center text-xs text-slate-400">
+                No notification history. New updates will be logged here.
+              </div>
+            ) : (
               <div className="space-y-2">
                 {notifications.map((n) => (
-                  <div key={n.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs space-y-1">
-                    <div className="flex justify-between font-bold text-navy">
-                      <span>{n.title}</span>
-                      <span className="text-[11px] text-slate-400 font-normal">
-                        {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                  <div key={n.id} className="p-3 bg-slate-50 hover:bg-slate-100/70 rounded-xl border border-slate-100 text-xs space-y-1 transition-colors">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-bold text-navy">{n.title}</span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] text-slate-400 font-normal">
+                          {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={deletingId === n.id}
+                          onClick={async () => {
+                            setDeletingId(n.id);
+                            await deleteNotification(n.id);
+                            setNotifications((prev) => prev.filter((item) => item.id !== n.id));
+                            setDeletingId(null);
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                          title="Delete notification"
+                          aria-label="Delete notification"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-slate-600">{n.body}</p>
+                    <p className="text-slate-600 leading-relaxed">{n.body}</p>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Contact Help */}
           <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500">

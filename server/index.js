@@ -153,19 +153,28 @@ app.post('/api/notify/appointment-booked', async (req, res) => {
     const body = `New appointment received from ${appointment.patient_name} for ${appointment.treatment_name} on ${appointment.appointment_date} at ${appointment.exact_time}.`;
     const target_url = '/doctor/dashboard';
 
-    // 1. Insert in notifications table for Doctor
-    const { error: notifError } = await supabase.from('notifications').insert({
-      recipient_role: 'doctor',
-      recipient_id: 'doctor',
-      appointment_id: appointment.id,
-      notification_type: 'appointment_booked',
-      title,
-      body,
-      target_url,
-      is_read: false,
-    });
+    // 1. Insert in notifications table for Doctor (idempotent: avoid duplicate insertion)
+    const { data: existingDocNotif } = await supabase
+      .from('notifications')
+      .select('id')
+      .eq('appointment_id', appointment.id)
+      .eq('notification_type', 'appointment_booked')
+      .maybeSingle();
 
-    if (notifError) console.error('[API /appointment-booked] Notif insert error:', notifError);
+    if (!existingDocNotif) {
+      const { error: notifError } = await supabase.from('notifications').insert({
+        recipient_role: 'doctor',
+        recipient_id: 'doctor',
+        appointment_id: appointment.id,
+        notification_type: 'appointment_booked',
+        title,
+        body,
+        target_url,
+        is_read: false,
+      });
+
+      if (notifError) console.error('[API /appointment-booked] Notif insert error:', notifError);
+    }
 
     // 2. Query ALL active Doctor devices
     const { data: devices, error: devError } = await supabase
@@ -239,17 +248,27 @@ app.post('/api/notify/status-updated', async (req, res) => {
 
     const target_url = `/track?token=${appointment.patient_tracking_token}`;
 
-    // 2. Insert notification for Patient
-    await supabase.from('notifications').insert({
-      recipient_role: 'patient',
-      recipient_id: appointment.patient_tracking_token,
-      appointment_id: appointment.id,
-      notification_type: `appointment_${status.toLowerCase()}`,
-      title,
-      body,
-      target_url,
-      is_read: false,
-    });
+    // 2. Insert notification for Patient (idempotent: avoid duplicate insertion)
+    const statusNotifType = `appointment_${status.toLowerCase()}`;
+    const { data: existingPatientNotif } = await supabase
+      .from('notifications')
+      .select('id')
+      .eq('appointment_id', appointment.id)
+      .eq('notification_type', statusNotifType)
+      .maybeSingle();
+
+    if (!existingPatientNotif) {
+      await supabase.from('notifications').insert({
+        recipient_role: 'patient',
+        recipient_id: appointment.patient_tracking_token,
+        appointment_id: appointment.id,
+        notification_type: statusNotifType,
+        title,
+        body,
+        target_url,
+        is_read: false,
+      });
+    }
 
     // 3. Find patient device tokens
     const { data: patientDevices } = await supabase
@@ -282,7 +301,122 @@ app.post('/api/notify/status-updated', async (req, res) => {
   }
 });
 
-// 4. Test Notification Endpoint
+// Helper: Authenticate caller identity (Doctor or Patient) for notifications API
+async function getCallerIdentity(req) {
+  // 1. Doctor verification via Supabase Auth JWT
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    if (token) {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (!error && user) {
+          return { role: 'doctor', recipient_id: 'doctor', user };
+        }
+      } catch (err) {
+        console.warn('[Auth] Token check error:', err.message);
+      }
+    }
+  }
+
+  // Doctor verification via Doctor header (when authenticated in local doctor session)
+  const doctorRole = req.headers['x-doctor-role'];
+  const doctorAuth = req.headers['x-doctor-auth'];
+  if (doctorAuth === 'true' && doctorRole === 'doctor') {
+    return { role: 'doctor', recipient_id: 'doctor' };
+  }
+
+  // 2. Patient verification via Patient Tracking Token
+  const patientToken = req.headers['x-patient-token'] || req.query.patient_token || req.body?.patient_token;
+  if (patientToken && typeof patientToken === 'string') {
+    const trimmed = patientToken.trim().toUpperCase();
+    if (trimmed.startsWith('SDC-') || trimmed.length >= 6) {
+      const { data: appt, error } = await supabase
+        .from('appointments')
+        .select('id, patient_tracking_token')
+        .eq('patient_tracking_token', trimmed)
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && appt) {
+        return { role: 'patient', recipient_id: trimmed };
+      }
+    }
+  }
+
+  return null;
+}
+
+// 5. Endpoint: Delete Single Notification (Strictly Authorised)
+app.delete('/api/notifications/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const caller = await getCallerIdentity(req);
+
+    if (!caller) {
+      return res.status(401).json({ error: 'Unauthorized: valid doctor session or patient tracking token required' });
+    }
+
+    // 1. Verify notification ownership
+    let checkQuery = supabase.from('notifications').select('id, recipient_role, recipient_id').eq('id', id);
+    if (caller.role === 'doctor') {
+      checkQuery = checkQuery.eq('recipient_role', 'doctor').neq('recipient_id', 'deleted');
+    } else {
+      checkQuery = checkQuery.eq('recipient_role', 'patient').eq('recipient_id', caller.recipient_id);
+    }
+
+    const { data: existing, error: checkError } = await checkQuery.maybeSingle();
+    if (checkError) throw checkError;
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Notification not found or access denied for this recipient' });
+    }
+
+    // 2. Perform deletion: attempt hard delete and persist soft delete
+    await supabase.from('notifications').delete().eq('id', id);
+    await supabase.from('notifications').update({ recipient_id: 'deleted', is_read: true }).eq('id', id);
+
+    console.log(`[API DELETE /notifications/:id] Deleted notification ${id} for ${caller.role} (${caller.recipient_id})`);
+    res.json({ success: true, deletedId: id });
+  } catch (err) {
+    console.error('[API DELETE /notifications/:id] Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. Endpoint: Delete All Notifications for Current Authorised Recipient
+app.delete('/api/notifications', async (req, res) => {
+  try {
+    const caller = await getCallerIdentity(req);
+
+    if (!caller) {
+      return res.status(401).json({ error: 'Unauthorized: valid doctor session or patient tracking token required' });
+    }
+
+    let delQuery = supabase.from('notifications').delete();
+    let updQuery = supabase.from('notifications').update({ recipient_id: 'deleted', is_read: true });
+
+    if (caller.role === 'doctor') {
+      delQuery = delQuery.eq('recipient_role', 'doctor').neq('recipient_id', 'deleted');
+      updQuery = updQuery.eq('recipient_role', 'doctor').neq('recipient_id', 'deleted');
+    } else {
+      delQuery = delQuery.eq('recipient_role', 'patient').eq('recipient_id', caller.recipient_id);
+      updQuery = updQuery.eq('recipient_role', 'patient').eq('recipient_id', caller.recipient_id);
+    }
+
+    await delQuery;
+    const { error: updErr } = await updQuery;
+    if (updErr) throw updErr;
+
+    console.log(`[API DELETE /notifications] Deleted all notifications for ${caller.role} (${caller.recipient_id})`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[API DELETE /notifications] Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 7. Test Notification Endpoint
 app.post('/api/notify/test', async (req, res) => {
   try {
     const { token, title, body, role } = req.body;

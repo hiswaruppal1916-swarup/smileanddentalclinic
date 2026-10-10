@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Bell, CheckCheck, ExternalLink, ShieldAlert, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Bell, CheckCheck, ExternalLink, ShieldAlert, Sparkles, Trash2, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../context/NotificationContext';
 
@@ -10,10 +10,15 @@ export default function NotificationBellModal() {
     notifications,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
+    deleteAllNotifications,
     unreadCount,
     isPermissionGranted,
     enableNotifications,
   } = useNotifications();
+
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const navigate = useNavigate();
 
@@ -25,6 +30,18 @@ export default function NotificationBellModal() {
       navigate(notif.target_url);
     }
     setIsBellOpen(false);
+  };
+
+  const handleDeleteOne = async (e, id) => {
+    e.stopPropagation();
+    setDeletingId(id);
+    await deleteNotification(id);
+    setDeletingId(null);
+  };
+
+  const handleConfirmDeleteAll = async () => {
+    await deleteAllNotifications();
+    setConfirmDeleteAll(false);
   };
 
   const formatDate = (isoStr) => {
@@ -60,14 +77,25 @@ export default function NotificationBellModal() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-xs font-semibold text-teal-700 hover:text-teal-800 p-1 flex items-center gap-1"
+                className="text-xs font-semibold text-teal-700 hover:text-teal-800 p-1.5 rounded-lg hover:bg-teal-50 flex items-center gap-1 transition-colors"
                 title="Mark all as read"
+                aria-label="Mark all as read"
               >
                 <CheckCheck className="w-3.5 h-3.5" /> Read All
+              </button>
+            )}
+            {notifications.length > 0 && (
+              <button
+                onClick={() => setConfirmDeleteAll(true)}
+                className="text-xs font-semibold text-rose-600 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 flex items-center gap-1 transition-colors"
+                title="Delete all notifications"
+                aria-label="Delete all notifications"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete All
               </button>
             )}
             <button
@@ -79,6 +107,30 @@ export default function NotificationBellModal() {
             </button>
           </div>
         </div>
+
+        {/* Delete All Confirmation Dialog Bar */}
+        {confirmDeleteAll && (
+          <div className="p-3.5 bg-rose-50 border-b border-rose-200 flex flex-col gap-2 animate-fadeIn">
+            <div className="flex items-center gap-2 text-rose-800 text-xs font-bold">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>Delete all notifications? This cannot be undone.</span>
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-1">
+              <button
+                onClick={() => setConfirmDeleteAll(false)}
+                className="px-3 py-1 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteAll}
+                className="px-3 py-1 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors shadow-sm"
+              >
+                Yes, Delete All
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Enable Push Notifications Banner if not granted */}
         {!isPermissionGranted && (
@@ -104,7 +156,7 @@ export default function NotificationBellModal() {
           {notifications.length === 0 ? (
             <div className="py-16 text-center text-slate-400 space-y-3">
               <Bell className="w-10 h-10 mx-auto text-slate-300 stroke-[1.5]" />
-              <p className="text-sm font-medium">No notifications yet</p>
+              <p className="text-sm font-semibold text-slate-600">No notifications yet</p>
               <p className="text-xs text-slate-400 max-w-xs mx-auto">
                 Updates regarding your bookings and clinic schedules will appear right here.
               </p>
@@ -114,22 +166,37 @@ export default function NotificationBellModal() {
               <div
                 key={notif.id}
                 onClick={() => handleNotificationClick(notif)}
-                className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+                className={`relative group p-3.5 rounded-xl border transition-all cursor-pointer ${
                   notif.is_read
                     ? 'bg-white border-slate-100 hover:bg-slate-50'
                     : 'bg-teal-50/50 border-teal-200 hover:bg-teal-50/80 shadow-sm'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <h5 className="font-heading font-bold text-xs sm:text-sm text-navy">
-                    {notif.title}
-                  </h5>
-                  {!notif.is_read && (
-                    <span className="w-2 h-2 rounded-full bg-teal-600 shrink-0 mt-1"></span>
-                  )}
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                    {!notif.is_read && (
+                      <span className="w-2 h-2 rounded-full bg-teal-600 shrink-0"></span>
+                    )}
+                    <h5 className="font-heading font-bold text-xs sm:text-sm text-navy truncate">
+                      {notif.title}
+                    </h5>
+                  </div>
+
+                  {/* Individual Delete Button */}
+                  <button
+                    onClick={(e) => handleDeleteOne(e, notif.id)}
+                    disabled={deletingId === notif.id}
+                    className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors shrink-0"
+                    title="Delete notification"
+                    aria-label="Delete notification"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
+
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">{notif.body}</p>
-                <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+
+                <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-100/60">
                   <span>{formatDate(notif.created_at)}</span>
                   {notif.target_url && (
                     <span className="text-teal-600 font-semibold flex items-center gap-0.5 hover:underline">

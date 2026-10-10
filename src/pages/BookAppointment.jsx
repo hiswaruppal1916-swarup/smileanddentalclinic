@@ -195,7 +195,23 @@ export default function BookAppointment() {
       localStorage.setItem('sdc_last_appointment_id', insertedAppt.id);
       window.dispatchEvent(new CustomEvent('sdc-patient-token-updated', { detail: trackingToken }));
 
-      // 2. Insert notification for Doctor directly into Supabase (Guaranteed in-app notification & Realtime alert)
+      // 2. Insert private notification for this specific Patient
+      try {
+        await supabase.from('notifications').insert({
+          recipient_role: 'patient',
+          recipient_id: trackingToken,
+          appointment_id: insertedAppt.id,
+          notification_type: 'appointment_booked',
+          title: 'Appointment Request Submitted 📅',
+          body: `Your request for ${insertedAppt.treatment_name} on ${insertedAppt.appointment_date} at ${exactTimeStr} has been received and is pending doctor review.`,
+          target_url: `/track?token=${trackingToken}`,
+          is_read: false,
+        });
+      } catch (patientNotifErr) {
+        console.warn('[Notification] Patient notification insert:', patientNotifErr);
+      }
+
+      // 3. Insert notification for Doctor directly into Supabase (Guaranteed in-app notification & Realtime alert)
       const docNotifTitle = 'New Appointment Request 🦷';
       const docNotifBody = `New appointment received from ${insertedAppt.patient_name} for ${insertedAppt.treatment_name} on ${insertedAppt.appointment_date} at ${insertedAppt.exact_time}.`;
 

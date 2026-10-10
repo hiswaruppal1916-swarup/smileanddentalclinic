@@ -20,6 +20,9 @@ import {
   Smartphone,
   Laptop,
   Sparkles,
+  Trash2,
+  CheckCheck,
+  ExternalLink,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -28,11 +31,23 @@ import { useNotifications } from '../../context/NotificationContext';
 export default function DoctorDashboard() {
   const { session, logoutDoctor, isDoctor } = useAuth();
   const navigate = useNavigate();
-  const { enableNotifications, isPermissionGranted } = useNotifications();
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    deleteAllNotifications,
+    enableNotifications,
+    isPermissionGranted,
+  } = useNotifications();
+
+  const [confirmDeleteAllNotifs, setConfirmDeleteAllNotifs] = useState(false);
+  const [deletingNotifId, setDeletingNotifId] = useState(null);
 
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'today', 'upcoming', 'all'
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'today', 'upcoming', 'all', 'notifications'
   const [searchQuery, setSearchQuery] = useState('');
   const [rejectModalAppt, setRejectModalAppt] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -295,6 +310,25 @@ export default function DoctorDashboard() {
             <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Test Push
           </button>
 
+          {/* Notifications Quick Toggle Button */}
+          <button
+            onClick={() => setActiveTab('notifications')}
+            className={`relative p-2.5 rounded-xl border transition-all flex items-center gap-1.5 ${
+              activeTab === 'notifications'
+                ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-transparent'
+            }`}
+            title="Doctor Notifications"
+            aria-label="Doctor Notifications"
+          >
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="flex items-center justify-center min-w-[16px] h-4 px-1 bg-rose-600 text-white text-[10px] font-bold rounded-full">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+
           {/* Settings */}
           <Link
             to="/doctor/settings"
@@ -415,6 +449,7 @@ export default function DoctorDashboard() {
             { id: 'upcoming', label: 'Upcoming', count: upcomingAppointments.length },
             { id: 'completed', label: 'Completed' },
             { id: 'all', label: 'All Records', count: appointments.length },
+            { id: 'notifications', label: 'Notifications', count: notifications.length, unread: unreadCount },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -426,7 +461,11 @@ export default function DoctorDashboard() {
               }`}
             >
               <span>{tab.label}</span>
-              {tab.count !== undefined && (
+              {tab.unread > 0 ? (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-600 text-white animate-pulse">
+                  {tab.unread}
+                </span>
+              ) : tab.count !== undefined ? (
                 <span
                   className={`px-1.5 py-0.5 rounded-full text-[10px] ${
                     activeTab === tab.id ? 'bg-teal-800 text-white' : 'bg-slate-100 text-slate-700'
@@ -434,37 +473,171 @@ export default function DoctorDashboard() {
                 >
                   {tab.count}
                 </span>
-              )}
+              ) : null}
             </button>
           ))}
         </div>
 
         {/* Search */}
-        <div className="relative min-w-[260px]">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search patient, phone, treatment..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-teal-500"
-          />
-        </div>
+        {activeTab !== 'notifications' && (
+          <div className="relative min-w-[260px]">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search patient, phone, treatment..."
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+        )}
       </div>
 
-      {/* 4. APPOINTMENTS LIST */}
-      <div className="space-y-4">
-        {loading ? (
-          <div className="py-20 text-center text-slate-400 flex items-center justify-center gap-2">
-            <RefreshCw className="w-4 h-4 animate-spin" /> Loading appointments...
+      {/* 4. NOTIFICATIONS PANEL OR APPOINTMENTS LIST */}
+      {activeTab === 'notifications' ? (
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-6 animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+              <h2 className="font-heading font-extrabold text-xl text-navy flex items-center gap-2">
+                <Bell className="w-5 h-5 text-teal-600" /> Doctor Portal Notifications
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {unreadCount > 0
+                  ? `${unreadCount} unread update(s) • Total ${notifications.length} notification(s)`
+                  : `All caught up • Total ${notifications.length} notification(s)`}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5"
+                >
+                  <CheckCheck className="w-4 h-4" /> Mark All Read
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  onClick={() => setConfirmDeleteAllNotifs(true)}
+                  className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete All
+                </button>
+              )}
+            </div>
           </div>
-        ) : displayedAppointments.length === 0 ? (
-          <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-2 text-slate-400">
-            <Calendar className="w-10 h-10 mx-auto text-slate-300 stroke-[1.5]" />
-            <p className="font-medium text-sm text-slate-600">No appointments in this category</p>
-            <p className="text-xs">New bookings will appear here automatically in real time.</p>
-          </div>
-        ) : (
+
+          {/* Confirm Delete All Dialog */}
+          {confirmDeleteAllNotifs && (
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-rose-800 animate-fadeIn">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+                <span className="font-semibold">
+                  Are you sure you want to delete all doctor notifications? This cannot be undone.
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setConfirmDeleteAllNotifs(false)}
+                  className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    await deleteAllNotifications();
+                    setConfirmDeleteAllNotifs(false);
+                  }}
+                  className="px-3 py-1.5 bg-rose-600 text-white rounded-xl hover:bg-rose-700 font-bold shadow-sm"
+                >
+                  Yes, Delete All
+                </button>
+              </div>
+            </div>
+          )}
+
+          {notifications.length === 0 ? (
+            <div className="py-16 text-center text-slate-400 space-y-3">
+              <Bell className="w-12 h-12 mx-auto text-slate-300 stroke-[1.5]" />
+              <p className="font-heading font-bold text-base text-navy">No notifications found</p>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                All doctor notifications have been cleared. New patient bookings and status changes will appear here automatically.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {notifications.map((notif) => (
+                <div
+                  key={notif.id}
+                  className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                    notif.is_read
+                      ? 'bg-white border-slate-200 hover:bg-slate-50/80'
+                      : 'bg-teal-50/60 border-teal-200 shadow-sm'
+                  }`}
+                >
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      {!notif.is_read && (
+                        <span className="w-2 h-2 rounded-full bg-teal-600 shrink-0"></span>
+                      )}
+                      <h4 className="font-heading font-bold text-sm text-navy">{notif.title}</h4>
+                      <span className="text-[11px] text-slate-400">
+                        {new Date(notif.created_at).toLocaleString('en-IN', {
+                          timeZone: 'Asia/Kolkata',
+                          day: '2-digit',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">{notif.body}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {!notif.is_read && (
+                      <button
+                        onClick={() => markAsRead(notif.id)}
+                        className="px-2.5 py-1 text-xs text-teal-700 hover:bg-teal-100/60 rounded-lg font-semibold transition-colors"
+                        title="Mark as read"
+                      >
+                        Mark read
+                      </button>
+                    )}
+                    <button
+                      disabled={deletingNotifId === notif.id}
+                      onClick={async () => {
+                        setDeletingNotifId(notif.id);
+                        await deleteNotification(notif.id);
+                        setDeletingNotifId(null);
+                      }}
+                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                      title="Delete notification"
+                      aria-label="Delete notification"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* APPOINTMENTS LIST */
+        <div className="space-y-4">
+          {loading ? (
+            <div className="py-20 text-center text-slate-400 flex items-center justify-center gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin" /> Loading appointments...
+            </div>
+          ) : displayedAppointments.length === 0 ? (
+            <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-2 text-slate-400">
+              <Calendar className="w-10 h-10 mx-auto text-slate-300 stroke-[1.5]" />
+              <p className="font-medium text-sm text-slate-600">No appointments in this category</p>
+              <p className="text-xs">New bookings will appear here automatically in real time.</p>
+            </div>
+          ) : (
           displayedAppointments.map((appt) => {
             const hasConflict = !!appt.conflict_warning;
             const bookingDateFormatted = new Date(appt.booking_time).toLocaleString();
@@ -618,6 +791,7 @@ export default function DoctorDashboard() {
           })
         )}
       </div>
+    )}
 
       {/* REJECT MODAL */}
       {rejectModalAppt && (

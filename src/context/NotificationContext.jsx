@@ -47,7 +47,7 @@ export function NotificationProvider({ children }) {
       let query = supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(30);
 
       if (isDoctor) {
-        query = query.eq('recipient_role', 'doctor');
+        query = query.eq('recipient_role', 'doctor').neq('recipient_id', 'deleted');
       } else if (patientToken) {
         query = query.eq('recipient_role', 'patient').eq('recipient_id', patientToken);
       } else {
@@ -80,6 +80,7 @@ export function NotificationProvider({ children }) {
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const newNotif = payload.new;
+            if (newNotif.recipient_id === 'deleted') return;
             const isRelevant =
               (isDoctor && newNotif.recipient_role === 'doctor') ||
               (!isDoctor && patientToken && newNotif.recipient_role === 'patient' && newNotif.recipient_id === patientToken);
@@ -102,11 +103,28 @@ export function NotificationProvider({ children }) {
             }
           } else if (payload.eventType === 'UPDATE') {
             const updatedNotif = payload.new;
-            setNotifications((prev) => {
-              const next = prev.map((n) => (n.id === updatedNotif.id ? updatedNotif : n));
-              setUnreadCount(next.filter((n) => !n.is_read).length);
-              return next;
-            });
+            if (updatedNotif.recipient_id === 'deleted') {
+              setNotifications((prev) => {
+                const next = prev.filter((n) => n.id !== updatedNotif.id);
+                setUnreadCount(next.filter((n) => !n.is_read).length);
+                return next;
+              });
+            } else {
+              setNotifications((prev) => {
+                const next = prev.map((n) => (n.id === updatedNotif.id ? updatedNotif : n));
+                setUnreadCount(next.filter((n) => !n.is_read).length);
+                return next;
+              });
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old?.id;
+            if (deletedId) {
+              setNotifications((prev) => {
+                const next = prev.filter((n) => n.id !== deletedId);
+                setUnreadCount(next.filter((n) => !n.is_read).length);
+                return next;
+              });
+            }
           }
         }
       )
@@ -141,6 +159,26 @@ export function NotificationProvider({ children }) {
     return false;
   };
 
+  const getAuthHeaders = async () => {
+    const headers = { 'Content-Type': 'application/json' };
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+    } catch {
+      // ignore
+    }
+    if (isDoctor) {
+      headers['x-doctor-auth'] = 'true';
+      headers['x-doctor-role'] = 'doctor';
+    }
+    if (patientToken) {
+      headers['x-patient-token'] = patientToken;
+    }
+    return headers;
+  };
+
   const markAsRead = async (id) => {
     setNotifications((prev) => {
       const next = prev.map((n) => (n.id === id ? { ...n, is_read: true } : n));
@@ -159,6 +197,84 @@ export function NotificationProvider({ children }) {
     }
   };
 
+  const deleteNotification = async (id) => {
+    if (!id) return;
+
+    // 1. Optimistic UI update
+    const target = notifications.find((n) => n.id === id);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    if (target && !target.is_read) {
+      setUnreadCount((c) => Math.max(0, c - 1));
+    }
+
+    // 2. Persist with server-side authorization check
+    try {
+      const headers = await getAuthHeaders();
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${apiUrl}/api/notifications/${id}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!res.ok) {
+        // Fallback scoped direct database query if server endpoint unreachable
+        let fb = supabase.from('notifications').delete().eq('id', id);
+        if (isDoctor) {
+          fb = fb.eq('recipient_role', 'doctor');
+        } else if (patientToken) {
+          fb = fb.eq('recipient_role', 'patient').eq('recipient_id', patientToken);
+        }
+        await fb;
+      }
+    } catch (err) {
+      console.warn('[NotificationContext] API delete error, executing scoped direct query:', err.message);
+      let fb = supabase.from('notifications').delete().eq('id', id);
+      if (isDoctor) {
+        fb = fb.eq('recipient_role', 'doctor');
+      } else if (patientToken) {
+        fb = fb.eq('recipient_role', 'patient').eq('recipient_id', patientToken);
+      }
+      await fb;
+    }
+  };
+
+  const deleteAllNotifications = async () => {
+    if (notifications.length === 0) return;
+
+    // 1. Optimistic UI update
+    setNotifications([]);
+    setUnreadCount(0);
+
+    // 2. Persist with server-side authorization check
+    try {
+      const headers = await getAuthHeaders();
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${apiUrl}/api/notifications`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!res.ok) {
+        let fb = supabase.from('notifications').delete();
+        if (isDoctor) {
+          fb = fb.eq('recipient_role', 'doctor');
+        } else if (patientToken) {
+          fb = fb.eq('recipient_role', 'patient').eq('recipient_id', patientToken);
+        }
+        await fb;
+      }
+    } catch (err) {
+      console.warn('[NotificationContext] API delete all error, executing scoped direct query:', err.message);
+      let fb = supabase.from('notifications').delete();
+      if (isDoctor) {
+        fb = fb.eq('recipient_role', 'doctor');
+      } else if (patientToken) {
+        fb = fb.eq('recipient_role', 'patient').eq('recipient_id', patientToken);
+      }
+      await fb;
+    }
+  };
+
   return (
     <NotificationContext.Provider
       value={{
@@ -171,6 +287,8 @@ export function NotificationProvider({ children }) {
         enableNotifications,
         markAsRead,
         markAllAsRead,
+        deleteNotification,
+        deleteAllNotifications,
         isBellOpen,
         setIsBellOpen,
         refreshNotifications: fetchNotifications,
