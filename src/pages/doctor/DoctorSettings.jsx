@@ -13,6 +13,7 @@ import {
   Save,
   X,
   Sparkles,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -135,21 +136,30 @@ export default function DoctorSettings() {
               Edit English/Bengali names, descriptions, or add new dental procedures.
             </p>
           </div>
-          <button
-            onClick={() => {
-              setEditingTreatment({
-                name_en: '',
-                name_bn: '',
-                short_desc: '',
-                full_desc: '',
-                image_url: '/assets/treatments/root-canal-treatment.jpg',
-              });
-              setIsNewTreatment(true);
-            }}
-            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
-          >
-            <Plus className="w-4 h-4" /> Add New Treatment
-          </button>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              to="/doctor/gallery"
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-navy rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 border border-slate-200/80"
+              title="Manage Clinic Gallery"
+            >
+              <ImageIcon className="w-4 h-4 text-teal-600" /> Gallery
+            </Link>
+            <button
+              onClick={() => {
+                setEditingTreatment({
+                  name_en: '',
+                  name_bn: '',
+                  short_desc: '',
+                  full_desc: '',
+                  image_url: '/assets/treatments/root-canal-treatment.jpg',
+                });
+                setIsNewTreatment(true);
+              }}
+              className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+            >
+              <Plus className="w-4 h-4" /> Add New Treatment
+            </button>
+          </div>
         </div>
 
         {/* Treatments List */}

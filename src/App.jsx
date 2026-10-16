@@ -24,6 +24,7 @@ import TermsConditions from './pages/TermsConditions';
 import DoctorLogin from './pages/doctor/DoctorLogin';
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
 import DoctorSettings from './pages/doctor/DoctorSettings';
+import DoctorGallery from './pages/doctor/DoctorGallery';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/doctor/login" element={<DoctorLogin />} />
           <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
           <Route path="/doctor/settings" element={<DoctorSettings />} />
+          <Route path="/doctor/gallery" element={<DoctorGallery />} />
 
           {/* 404 Fallback - Never a broken dead-end */}
           <Route path="*" element={<Navigate to="/" replace />} />

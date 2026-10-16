@@ -23,6 +23,7 @@ import {
   Trash2,
   CheckCheck,
   ExternalLink,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -328,6 +329,15 @@ export default function DoctorDashboard() {
               </span>
             )}
           </button>
+
+          {/* Gallery Management */}
+          <Link
+            to="/doctor/gallery"
+            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all"
+            title="Manage Clinic Gallery"
+          >
+            <ImageIcon className="w-4 h-4 text-teal-600" />
+          </Link>
 
           {/* Settings */}
           <Link

@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Lock, Mail, AlertCircle, KeyRound, Eye, EyeOff, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, AlertCircle, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../lib/supabase';
 
 export default function DoctorLogin() {
-  const [email, setEmail] = useState('mandalananyo@gmail.com');
-  const [password, setPassword] = useState('Doctor@Smile2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [infoMsg, setInfoMsg] = useState('');
 
   const { loginDoctor } = useAuth();
   const navigate = useNavigate();
@@ -19,32 +17,16 @@ export default function DoctorLogin() {
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
-    setInfoMsg('');
 
     try {
-      await loginDoctor(email, password);
+      await loginDoctor(email.trim(), password);
       navigate('/doctor/dashboard');
     } catch (err) {
       console.error('Doctor auth error:', err);
-      // Fallback: If network issue or credentials mismatch, verify with authorized clinic demo credentials
-      if (
-        (email === 'mandalananyo@gmail.com' || email === 'doctor@smileclinic.com') &&
-        password === 'Doctor@Smile2026'
-      ) {
-        localStorage.setItem('sdc_is_doctor', 'true');
-        navigate('/doctor/dashboard');
-      } else {
-        setErrorMsg(err.message || 'Authentication failed. Please check credentials.');
-      }
+      setErrorMsg(err.message || 'Authentication failed. Please verify your email and password.');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickFill = () => {
-    setEmail('mandalananyo@gmail.com');
-    setPassword('Doctor@Smile2026');
-    setInfoMsg('Credentials populated. Click "Sign In to Portal" to enter.');
   };
 
   return (
@@ -62,37 +44,10 @@ export default function DoctorLogin() {
           </p>
         </div>
 
-        {/* Demo Credentials Box */}
-        <div className="p-4 bg-teal-50/80 border border-teal-200/70 rounded-2xl space-y-2 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-teal-900 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-teal-600" /> Authorized Doctor Credentials:
-            </span>
-            <button
-              type="button"
-              onClick={handleQuickFill}
-              className="text-[11px] font-bold text-teal-700 bg-white px-2.5 py-1 rounded-md border border-teal-300 hover:bg-teal-100 transition-colors shadow-2xs"
-            >
-              Fill Credentials
-            </button>
-          </div>
-          <div className="font-mono text-[11px] text-teal-800 space-y-1 bg-white/70 p-2.5 rounded-xl border border-teal-100">
-            <div><strong>Email:</strong> mandalananyo@gmail.com</div>
-            <div><strong>Password:</strong> Doctor@Smile2026</div>
-          </div>
-        </div>
-
         {errorMsg && (
-          <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-700 text-xs">
+          <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-rose-700 text-xs animate-fadeIn">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{errorMsg}</span>
-          </div>
-        )}
-
-        {infoMsg && (
-          <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-emerald-800 text-xs">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-            <span>{infoMsg}</span>
           </div>
         )}
 
@@ -106,8 +61,9 @@ export default function DoctorLogin() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="mandalananyo@gmail.com"
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              placeholder="doctor@example.com"
+              autoComplete="email"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
             />
           </div>
 
@@ -121,13 +77,15 @@ export default function DoctorLogin() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Doctor@Smile2026"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 pr-10"
+                placeholder="••••••••"
+                autoComplete="current-password"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 pr-10 transition-all"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
