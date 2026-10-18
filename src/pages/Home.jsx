@@ -11,9 +11,12 @@ import {
   Award,
   Stethoscope,
   HeartPulse,
+  MapPin,
+  ExternalLink,
 } from 'lucide-react';
 import WhatsAppIcon from '../components/WhatsAppIcon';
 import HeroCarousel from '../components/HeroCarousel';
+import HomepageReviews from '../components/HomepageReviews';
 import { supabase } from '../lib/supabase';
 
 export default function Home() {
@@ -295,7 +298,85 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 5. CALL TO ACTION: BOOK WITH EXACT TIME */}
+      {/* 5. HOMEPAGE REVIEWS SECTION */}
+      <HomepageReviews />
+
+      {/* 6. CLINIC LOCATION & GOOGLE MAPS GUIDANCE */}
+      <section className="max-w-[1160px] w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-clinical p-6 sm:p-8 lg:p-10">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-8">
+            <div className="flex-1 min-w-0 space-y-4">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-100 text-teal-800 text-xs font-bold uppercase tracking-wider">
+                <MapPin className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                <span>Easy Landmark Guidance</span>
+              </div>
+              <h2 className="font-heading font-extrabold text-2xl sm:text-3xl text-navy">
+                Visit Smile & Dental Clinic in Burdwan
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl">
+                Conveniently located in the heart of Burdwan with zero weekly off days. Walk-ins and scheduled appointments welcome every day.
+              </p>
+
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs sm:text-sm text-slate-700 space-y-2 max-w-2xl">
+                <p>
+                  <strong>Address & Landmarks:</strong> Opposite <strong>INOX Burdwan</strong>, Beside <strong>WOW MOMO</strong>, and adjacent to <strong>SBI ATM</strong>.
+                </p>
+                <p className="text-slate-500 text-xs">
+                  Burdwan 713101, West Bengal • Ample 2-wheeler and 4-wheeler complex parking available.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <a
+                  href="https://maps.app.goo.gl/DaxAQyaVuSHSXSck9"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-heading font-bold text-xs sm:text-sm transition-all shadow-sm"
+                >
+                  <MapPin className="w-4 h-4 shrink-0" /> Open Turn-by-Turn GPS Directions
+                </a>
+                <Link
+                  to="/contact"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-navy font-heading font-semibold text-xs sm:text-sm transition-all"
+                >
+                  View Contact Page <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                </Link>
+              </div>
+            </div>
+
+            <div className="w-full lg:w-[360px] shrink-0">
+              <div className="p-5 bg-gradient-to-br from-teal-50 to-slate-100 rounded-2xl border border-teal-100/80 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-teal-900">
+                    <Clock className="w-4 h-4 text-teal-600 shrink-0" /> Clinic Consultation Hours
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold">
+                    Open 7 Days
+                  </span>
+                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between items-center py-1.5 border-b border-teal-100 text-slate-700">
+                    <span className="font-semibold text-teal-800">Morning Session:</span>
+                    <span className="font-bold text-navy">10:30 AM – 2:00 PM</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1.5 text-slate-700">
+                    <span className="font-semibold text-teal-800">Evening Session:</span>
+                    <span className="font-bold text-navy">5:00 PM – 9:00 PM</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-teal-100/80 text-[11px] text-slate-500">
+                  Direct line for emergency queries:{' '}
+                  <a href="tel:9903424407" className="font-bold text-teal-700 hover:underline">
+                    9903424407
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. CALL TO ACTION: BOOK WITH EXACT TIME */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-teal-800 via-teal-700 to-navy text-white p-8 sm:p-12 lg:p-16 shadow-2xl">
           <div className="max-w-2xl space-y-6">

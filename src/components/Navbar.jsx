@@ -16,6 +16,7 @@ export default function Navbar() {
     { name: 'Treatments', path: '/treatments' },
     { name: 'Team', path: '/team' },
     { name: 'Gallery', path: '/gallery' },
+    { name: 'Reviews', path: '/reviews' },
     { name: 'Track Status', path: '/track' },
     { name: 'Contact', path: '/contact' },
   ];

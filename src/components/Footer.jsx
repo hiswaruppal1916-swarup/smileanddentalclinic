@@ -59,6 +59,9 @@ export default function Footer() {
                 <Link to="/gallery" className="hover:text-teal-400 transition-colors">Clinic Gallery</Link>
               </li>
               <li>
+                <Link to="/reviews" className="hover:text-teal-400 transition-colors">Patient Reviews</Link>
+              </li>
+              <li>
                 <Link to="/contact" className="hover:text-teal-400 transition-colors">Location & Contact</Link>
               </li>
               <li>

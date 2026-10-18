@@ -19,7 +19,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // 3. PWA CACHE CONFIGURATION
-const CACHE_NAME = 'sdc-pwa-v1.2';
+const CACHE_NAME = 'sdc-pwa-v1.4';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -30,6 +30,12 @@ const APP_SHELL = [
   '/assets/icon-512.png',
   '/assets/icon-maskable-512.png',
   '/assets/apple-touch-icon.png',
+  '/assets/dr-ananyo-mandal.jpg',
+  '/assets/hero/slide-3-landscape.jpg',
+  '/assets/hero/slide-smile-landscape.jpg',
+  '/assets/hero/slide-tips-landscape.jpg',
+  '/assets/hero/slide-happy-smile-landscape.jpg',
+  '/assets/hero/slide-checkup-care-landscape.jpg',
 ];
 
 // URLs that MUST NEVER be cached to prevent leaking sensitive patient/doctor data
@@ -142,11 +148,10 @@ self.addEventListener('fetch', (event) => {
         }
 
         return networkResponse;
-      }).catch(() => {
-        // Fallback for failed image requests when offline
-        if (request.destination === 'image') {
-          return caches.match('/assets/favicon.jpg');
-        }
+      }).catch((err) => {
+        // Do not substitute real photographs or slides with favicon
+        console.warn('[SW] Asset fetch failed:', url);
+        return null;
       });
     })
   );

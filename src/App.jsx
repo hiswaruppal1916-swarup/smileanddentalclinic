@@ -14,6 +14,7 @@ import Treatments from './pages/Treatments';
 import TreatmentDetail from './pages/TreatmentDetail';
 import Team from './pages/Team';
 import Gallery from './pages/Gallery';
+import Reviews from './pages/Reviews';
 import BookAppointment from './pages/BookAppointment';
 import AppointmentTracking from './pages/AppointmentTracking';
 import Contact from './pages/Contact';
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="/treatments/:slug" element={<TreatmentDetail />} />
           <Route path="/team" element={<Team />} />
           <Route path="/gallery" element={<Gallery />} />
+          <Route path="/reviews" element={<Reviews />} />
           <Route path="/book" element={<BookAppointment />} />
           <Route path="/track" element={<AppointmentTracking />} />
           <Route path="/contact" element={<Contact />} />
