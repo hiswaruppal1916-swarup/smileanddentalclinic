@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users,
@@ -12,59 +12,124 @@ import {
   Clock,
   UserCheck,
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+
+// Four initial clinic staff members as reliable instant fallback
+const INITIAL_STAFF_MEMBERS = [
+  {
+    id: 'mayra-yasmin',
+    name: 'Mayra Yasmin',
+    role: 'Head Incharge of Clinic',
+    badgeRole: 'Head Incharge',
+    photo: '/assets/team/mayra-yasmin.jpg',
+    photo_url: '/assets/team/mayra-yasmin.jpg',
+    alt: 'Mayra Yasmin — Head Incharge of Clinic at Smile & Dental Clinic',
+    objectPosition: 'object-[50%_28%]',
+    description:
+      'Head Incharge of Clinic, overseeing daily clinic operations, operatory readiness, patient care standards, and smooth workflow coordination.',
+  },
+  {
+    id: 'tune-chowdhury',
+    name: 'Tune Chowdhury',
+    role: 'Account',
+    badgeRole: 'Accounts',
+    photo: '/assets/team/tune-chowdhury.jpg',
+    photo_url: '/assets/team/tune-chowdhury.jpg',
+    alt: 'Tune Chowdhury — Account at Smile & Dental Clinic',
+    objectPosition: 'object-[50%_42%]',
+    description:
+      'Manages clinic accounts, financial documentation, billing records, and administrative accounts management for the clinic.',
+  },
+  {
+    id: 'manisha-mandal',
+    name: 'Manisha Mandal',
+    role: 'Cashier',
+    badgeRole: 'Cashier Desk',
+    photo: '/assets/team/manisha-mandal.jpg',
+    photo_url: '/assets/team/manisha-mandal.jpg',
+    alt: 'Manisha Mandal — Cashier at Smile & Dental Clinic',
+    objectPosition: 'object-[50%_28%]',
+    description:
+      'Handles patient billing, payments, fee receipts, and desk financial transactions with attentive, accurate front-office service.',
+  },
+  {
+    id: 'rameswar-raj-mandal',
+    name: 'Rameswar Raj Mandal',
+    role: 'Coordinator of Clinic',
+    badgeRole: 'Clinic Coordinator',
+    photo: '/assets/team/rameswar-raj-mandal.jpg',
+    photo_url: '/assets/team/rameswar-raj-mandal.jpg',
+    alt: 'Rameswar Raj Mandal — Coordinator of Clinic at Smile & Dental Clinic',
+    customImageStyle: {
+      transform: 'scale(1.58)',
+      transformOrigin: '73% 45%',
+    },
+    description:
+      'Coordinator of Clinic, managing patient scheduling, front-desk logistics, appointments, and day-to-day administrative support.',
+  },
+];
 
 export default function Team() {
-  // Four supporting clinic staff members
-  const staffMembers = [
-    {
-      id: 'mayra-yasmin',
-      name: 'Mayra Yasmin',
-      role: 'Head Incharge of Clinic',
-      badgeRole: 'Head Incharge',
-      photo: '/assets/team/mayra-yasmin.jpg',
-      alt: 'Mayra Yasmin — Head Incharge of Clinic at Smile & Dental Clinic',
-      objectPosition: 'object-[50%_28%]',
-      description:
-        'Head Incharge of Clinic, overseeing daily clinic operations, operatory readiness, patient care standards, and smooth workflow coordination.',
-    },
-    {
-      id: 'tune-chowdhury',
-      name: 'Tune Chowdhury',
-      role: 'Account',
-      badgeRole: 'Accounts',
-      photo: '/assets/team/tune-chowdhury.jpg',
-      alt: 'Tune Chowdhury — Account at Smile & Dental Clinic',
-      objectPosition: 'object-[50%_42%]',
-      description:
-        'Manages clinic accounts, financial documentation, billing records, and administrative accounts management for the clinic.',
-    },
-    {
-      id: 'manisha-mandal',
-      name: 'Manisha Mandal',
-      role: 'Cashier',
-      badgeRole: 'Cashier Desk',
-      photo: '/assets/team/manisha-mandal.jpg',
-      alt: 'Manisha Mandal — Cashier at Smile & Dental Clinic',
-      objectPosition: 'object-[50%_28%]',
-      description:
-        'Handles patient billing, payments, fee receipts, and desk financial transactions with attentive, accurate front-office service.',
-    },
-    {
-      id: 'rameswar-raj-mandal',
-      name: 'Rameswar Raj Mandal',
-      role: 'Coordinator of Clinic',
-      badgeRole: 'Clinic Coordinator',
-      photo: '/assets/team/rameswar-raj-mandal.jpg',
-      alt: 'Rameswar Raj Mandal — Coordinator of Clinic at Smile & Dental Clinic',
-      // Focus on Rameswar Raj Mandal (coordinator standing on right)
-      customImageStyle: {
-        transform: 'scale(1.58)',
-        transformOrigin: '73% 45%',
-      },
-      description:
-        'Coordinator of Clinic, managing patient scheduling, front-desk logistics, appointments, and day-to-day administrative support.',
-    },
-  ];
+  const [staffMembers, setStaffMembers] = useState(INITIAL_STAFF_MEMBERS);
+  const [doctorInfo, setDoctorInfo] = useState({
+    name: 'Dr. Ananyo Mandal',
+    role: 'MDS (WBUHS, CAL) • Cosmetic Dental Surgeon',
+    photo_url: '/assets/dr-ananyo-mandal.jpg',
+  });
+
+  const fetchTeamMembers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        // Separate support staff from Head Doctor
+        const support = data.filter(
+          (m) => !m.is_head && m.name !== 'Dr. Ananyo Mandal'
+        );
+        if (support.length > 0) {
+          setStaffMembers(support);
+        }
+
+        const headDoc = data.find(
+          (m) => m.is_head || m.name === 'Dr. Ananyo Mandal'
+        );
+        if (headDoc) {
+          setDoctorInfo((prev) => ({
+            ...prev,
+            name: headDoc.name || prev.name,
+            photo_url: headDoc.photo_url || prev.photo_url,
+          }));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch live team members:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeamMembers();
+
+    // Realtime synchronization: automatically updates Team page on changes
+    const channel = supabase
+      .channel('public_team_members_live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'team_members' },
+        () => {
+          fetchTeamMembers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   return (
     <div className="py-10 sm:py-16 lg:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16 sm:space-y-24">
@@ -104,8 +169,8 @@ export default function Team() {
                 <div className="bg-white p-3 rounded-3xl border border-slate-200/80 shadow-md space-y-3">
                   <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-100">
                     <img
-                      src="/assets/dr-ananyo-mandal.jpg"
-                      alt="Dr. Ananyo Mandal — Head of Smile & Dental Clinic"
+                      src={doctorInfo.photo_url || '/assets/dr-ananyo-mandal.jpg'}
+                      alt={`${doctorInfo.name || 'Dr. Ananyo Mandal'} — Head of Smile & Dental Clinic`}
                       className="w-full h-full object-cover object-top"
                     />
                   </div>
@@ -133,7 +198,7 @@ export default function Team() {
                   id="doctor-profile-heading"
                   className="font-heading font-extrabold text-2xl sm:text-3xl lg:text-4xl text-navy tracking-tight"
                 >
-                  Dr. Ananyo Mandal
+                  {doctorInfo.name || 'Dr. Ananyo Mandal'}
                 </h2>
                 <p className="text-sm sm:text-base font-bold text-teal-700">
                   MDS (WBUHS, CAL) • Cosmetic Dental Surgeon
@@ -217,17 +282,29 @@ export default function Team() {
                 {/* Staff Photo Container */}
                 <div className="relative aspect-[3/4] w-full overflow-hidden bg-slate-100">
                   <img
-                    src={staff.photo}
-                    alt={staff.alt}
+                    src={staff.photo_url || staff.photo}
+                    alt={staff.alt || `${staff.name} — ${staff.role} at Smile & Dental Clinic`}
                     loading="lazy"
-                    style={staff.customImageStyle || {}}
+                    style={
+                      staff.customImageStyle ||
+                      (staff.name === 'Rameswar Raj Mandal' &&
+                      (staff.photo_url?.includes('rameswar-raj-mandal') ||
+                        staff.photo?.includes('rameswar-raj-mandal'))
+                        ? { transform: 'scale(1.58)', transformOrigin: '73% 45%' }
+                        : {})
+                    }
                     className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
-                      staff.objectPosition || 'object-center'
+                      staff.objectPosition ||
+                      (staff.name === 'Tune Chowdhury'
+                        ? 'object-[50%_42%]'
+                        : staff.name === 'Manisha Mandal' || staff.name === 'Mayra Yasmin'
+                        ? 'object-[50%_28%]'
+                        : 'object-center')
                     }`}
                   />
                   {/* Role Tag Pill Over Photo */}
                   <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-navy/85 backdrop-blur-md text-white text-[11px] font-bold shadow-sm">
-                    {staff.badgeRole}
+                    {staff.badgeRole || staff.role}
                   </div>
                 </div>
 
@@ -242,7 +319,7 @@ export default function Team() {
                     </p>
                   </div>
                   <p className="text-xs text-slate-600 leading-relaxed pt-1">
-                    {staff.description}
+                    {staff.description || `${staff.role} at Smile & Dental Clinic.`}
                   </p>
                 </div>
               </div>

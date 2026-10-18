@@ -14,6 +14,7 @@ import {
   X,
   Sparkles,
   Image as ImageIcon,
+  Users,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -143,6 +144,13 @@ export default function DoctorSettings() {
               title="Manage Clinic Gallery"
             >
               <ImageIcon className="w-4 h-4 text-teal-600" /> Gallery
+            </Link>
+            <Link
+              to="/doctor/team"
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-navy rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 border border-slate-200/80"
+              title="Manage Clinic Team"
+            >
+              <Users className="w-4 h-4 text-teal-600" /> Team
             </Link>
             <button
               onClick={() => {

@@ -95,33 +95,6 @@ export default function DoctorGallery() {
 
   useEffect(() => {
     loadGalleryPhotos();
-
-    // Supabase Realtime Subscription for instantaneous sync
-    const channel = supabase
-      .channel('doctor_gallery_realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'gallery' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setPhotos((prev) => {
-              if (prev.some((p) => p.id === payload.new.id)) return prev;
-              return [payload.new, ...prev];
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            setPhotos((prev) =>
-              prev.map((p) => (p.id === payload.new.id ? payload.new : p))
-            );
-          } else if (payload.eventType === 'DELETE') {
-            setPhotos((prev) => prev.filter((p) => p.id === payload.old.id));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   // Category matching helpers
@@ -201,6 +174,7 @@ export default function DoctorGallery() {
   // Upload to Supabase Storage & Insert into gallery table
   const handleSavePhoto = async (e) => {
     e.preventDefault();
+    if (isUploading) return;
     if (!selectedFile) {
       setStatusMessage({ type: 'error', text: 'Please select an image file to upload.' });
       return;
@@ -268,8 +242,8 @@ export default function DoctorGallery() {
         throw new Error('Database record error: ' + dbError.message);
       }
 
-      // Immediate UI update
-      setPhotos((prev) => [insertedRecord, ...prev]);
+      // Immediate UI update - affect ONLY this category count; preserve other categories
+      setPhotos((prev) => [insertedRecord, ...prev.filter((p) => p.id !== insertedRecord.id)]);
       clearSelection();
       setStatusMessage({
         type: 'success',
@@ -288,6 +262,7 @@ export default function DoctorGallery() {
 
   // Delete Photo from Supabase Table and Storage
   const handleDeletePhoto = async (photo) => {
+    if (deletingId) return;
     const confirmDelete = window.confirm(
       'Are you sure you want to permanently delete this photograph from the gallery?'
     );
@@ -307,8 +282,12 @@ export default function DoctorGallery() {
         throw new Error('Failed to remove database record: ' + dbError.message);
       }
 
-      // 2. Delete from Supabase Storage if storage_path is recorded
-      if (photo.storage_path) {
+      // 2. Delete from Supabase Storage if storage_path is recorded and not a static asset
+      if (
+        photo.storage_path &&
+        !photo.storage_path.startsWith('/assets/') &&
+        !photo.storage_path.startsWith('http')
+      ) {
         const { error: storageError } = await supabase.storage
           .from('gallery')
           .remove([photo.storage_path]);
@@ -318,7 +297,7 @@ export default function DoctorGallery() {
         }
       }
 
-      // 3. Update local state
+      // 3. Update local state - only decrement affected category count; preserve all other categories
       setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
       setStatusMessage({
         type: 'success',
@@ -353,6 +332,13 @@ export default function DoctorGallery() {
             className="text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors"
           >
             Dashboard
+          </Link>
+          <span className="text-slate-300">•</span>
+          <Link
+            to="/doctor/team"
+            className="text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            Team
           </Link>
         </div>
 

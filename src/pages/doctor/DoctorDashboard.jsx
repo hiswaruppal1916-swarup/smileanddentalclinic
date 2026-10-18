@@ -24,6 +24,7 @@ import {
   CheckCheck,
   ExternalLink,
   Image as ImageIcon,
+  Users,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -337,6 +338,15 @@ export default function DoctorDashboard() {
             title="Manage Clinic Gallery"
           >
             <ImageIcon className="w-4 h-4 text-teal-600" />
+          </Link>
+
+          {/* Team Management */}
+          <Link
+            to="/doctor/team"
+            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all"
+            title="Manage Clinic Team"
+          >
+            <Users className="w-4 h-4 text-teal-600" />
           </Link>
 
           {/* Settings */}

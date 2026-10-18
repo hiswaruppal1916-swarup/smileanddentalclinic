@@ -54,13 +54,15 @@ export default function Gallery() {
         { event: '*', schema: 'public', table: 'gallery' },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            setPhotos((prev) => [payload.new, ...prev]);
+            setPhotos((prev) =>
+              prev.some((p) => p.id === payload.new.id) ? prev : [payload.new, ...prev]
+            );
           } else if (payload.eventType === 'UPDATE') {
             setPhotos((prev) =>
               prev.map((p) => (p.id === payload.new.id ? payload.new : p))
             );
           } else if (payload.eventType === 'DELETE') {
-            setPhotos((prev) => prev.filter((p) => p.id === payload.old.id));
+            setPhotos((prev) => prev.filter((p) => p.id !== payload.old.id));
           }
         }
       )

@@ -26,6 +26,7 @@ import DoctorLogin from './pages/doctor/DoctorLogin';
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
 import DoctorSettings from './pages/doctor/DoctorSettings';
 import DoctorGallery from './pages/doctor/DoctorGallery';
+import DoctorTeam from './pages/doctor/DoctorTeam';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -65,6 +66,7 @@ export default function App() {
           <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
           <Route path="/doctor/settings" element={<DoctorSettings />} />
           <Route path="/doctor/gallery" element={<DoctorGallery />} />
+          <Route path="/doctor/team" element={<DoctorTeam />} />
 
           {/* 404 Fallback - Never a broken dead-end */}
           <Route path="*" element={<Navigate to="/" replace />} />
