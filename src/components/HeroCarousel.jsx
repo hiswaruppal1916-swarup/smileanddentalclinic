@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Heart,
   Clock,
+  Smile,
 } from 'lucide-react';
 
 const SLIDES = [
@@ -50,6 +51,18 @@ const SLIDES = [
   },
   {
     id: 4,
+    type: 'landscape',
+    image: '/assets/hero/slide-happy-smile-landscape.jpg',
+    badge: 'Healthy Happy Smiles',
+    badgeIcon: Smile,
+    headline: 'Smile With an Open Heart',
+    subheadline: 'Reduce stress, stay healthy, and live well — smile with an open heart with compassionate dental care.',
+    ctaText: 'Book Preferred Time',
+    ctaLink: '/book',
+    alt: 'Happy smiling patients - Smile with an open heart, reduce stress and stay healthy at Smile & Dental Clinic',
+  },
+  {
+    id: 5,
     type: 'landscape',
     image: '/assets/hero/slide-checkup-care-landscape.jpg',
     badge: 'We Love Our Patients',
